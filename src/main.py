@@ -4,7 +4,7 @@ import pandas as pd
 from parser import parse_xml_to_dataframe
 from preprocessing import preprocess_patient
 
-data_folder = "./data/raw/train"
+data_folder = "../data/raw/train"
 
 processed_patients = []
 
@@ -23,4 +23,4 @@ for file in os.listdir(data_folder):
 combined_df = pd.concat(processed_patients)
 
 print("Combined shape:", combined_df.shape)
-print(combined_df.head())
+print(combined_df.tail(50))
