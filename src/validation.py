@@ -68,3 +68,11 @@ def find_and_remove_extreme_changes(df, threshold=90):
 def check_for_duplicate_timestamps(df):
     duplicates = df.reset_index().duplicated(subset=["patient_id", "timestamp"]).sum()
     print("Duplicate (patient, timestamp) pairs:", duplicates)
+    
+def check_bolus_dose(df):
+    summary = df["bolus_raw"].describe()
+    print(summary)
+    
+    number_of_dose = (df["bolus_raw"] > 0).sum()
+    print("Number of dose: ", number_of_dose)
+    return summary
