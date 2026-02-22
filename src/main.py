@@ -1,26 +1,18 @@
-import os
 import pandas as pd
+from data_handling import clean_and_summarise_patients_data, parse_and_combine_patients
+from parser import parse_dataframe_to_csv, parse_dataframe_to_parquet
 
-from parser import parse_xml_to_dataframe
-from preprocessing import preprocess_patient
 
-data_folder = "../data/raw/train"
+data_folder = "./data/raw/test"
 
 processed_patients = []
 
-for file in os.listdir(data_folder):
-    if file.endswith(".xml"):
-        patient_id = file.split(".")[0]
+combined_df = parse_and_combine_patients(data_folder, processed_patients)
+cleaned_df = clean_and_summarise_patients_data(combined_df)
 
-        file_path = os.path.join(data_folder, file)
+output_folder = "./data/processed/test"
 
-        df = parse_xml_to_dataframe(file_path)
-        df_processed = preprocess_patient(df, patient_id)
+df_to_save =cleaned_df.reset_index()
 
-        processed_patients.append(df_processed)
-
-# Combine all patients
-combined_df = pd.concat(processed_patients)
-
-print("Combined shape:", combined_df.shape)
-print(combined_df.tail(50))
+parse_dataframe_to_csv(output_folder, df_to_save)
+parse_dataframe_to_parquet(output_folder, df_to_save)
