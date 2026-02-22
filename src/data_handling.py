@@ -3,7 +3,7 @@ import pandas as pd
 
 from parser import parse_xml_to_bolus_dataframe, parse_xml_to_dataframe
 from preprocessing import preprocess_patient
-from validation import check_for_duplicate_timestamps, check_speed, find_and_remove_extreme_changes, get_summary_by_patient
+from validation import check_for_duplicate_boluses, check_for_duplicate_timestamps, check_speed, find_and_remove_extreme_changes, get_summary_by_patient
 
 
 def parse_and_combine_patients(data_folder, processed_patients):
@@ -25,12 +25,14 @@ def parse_and_combine_patients(data_folder, processed_patients):
 def parse_and_combine_patients_bolus(data_folder, processsed_patinets_bolus):
     for file in os.listdir(data_folder):
         if file.endswith(".xml"):
+            patient_id = file.split(".")[0]
             file_path = os.path.join(data_folder, file)
 
-            df = parse_xml_to_bolus_dataframe(file_path)
+            df = parse_xml_to_bolus_dataframe(file_path, patient_id=patient_id)
             processsed_patinets_bolus.append(df)
 
-    combined_bolus_df = pd.concat(df)
+    combined_bolus_df = pd.concat(processsed_patinets_bolus)
+    check_for_duplicate_boluses(combined_bolus_df)
     return combined_bolus_df
 
 def clean_and_summarise_patients_data(combined_df):

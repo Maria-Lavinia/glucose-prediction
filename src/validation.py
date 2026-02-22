@@ -69,6 +69,25 @@ def check_for_duplicate_timestamps(df):
     duplicates = df.reset_index().duplicated(subset=["patient_id", "timestamp"]).sum()
     print("Duplicate (patient, timestamp) pairs:", duplicates)
     
+def check_for_duplicate_boluses(df):
+    df_reset = df.reset_index()
+
+    if "timestamp" in df_reset.columns:
+        timestamp_col = "timestamp"
+    elif "insuline_timestamp_begin" in df_reset.columns:
+        timestamp_col = "insuline_timestamp_begin"
+    elif "insulin_timestamp_begin" in df_reset.columns:
+        timestamp_col = "insulin_timestamp_begin"
+    else:
+        raise ValueError("No bolus timestamp column found for duplicate check")
+
+    subset_cols = [timestamp_col]
+    if "patient_id" in df_reset.columns:
+        subset_cols = ["patient_id", timestamp_col]
+
+    duplicates = df_reset.duplicated(subset=subset_cols).sum()
+    print(f"Duplicate ({', '.join(subset_cols)}) pairs:", duplicates)
+    
 def check_bolus_dose(df):
     summary = df["bolus_raw"].describe()
     print(summary)

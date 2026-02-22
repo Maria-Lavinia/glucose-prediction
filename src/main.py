@@ -4,7 +4,7 @@ from parser import add_bolus_raw
 from validation import check_bolus_dose
 
 
-data_folder = "./data/raw/test"
+data_folder = "../data/raw/test"
 
 processed_patients = []
 processed_patients_bolus = []

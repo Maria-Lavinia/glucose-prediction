@@ -22,7 +22,7 @@ def parse_xml_to_dataframe(file_path):
     
     return df_glucose
 
-def parse_xml_to_bolus_dataframe(file_path):
+def parse_xml_to_bolus_dataframe(file_path, patient_id=None):
     tree = ET.parse(file_path)
     root = tree.getroot()
     bolus_section = root.find("bolus")
@@ -39,19 +39,44 @@ def parse_xml_to_bolus_dataframe(file_path):
     
     df_bolus = pd.DataFrame(bolus_data, columns=["insuline_timestamp_begin", "insulin_timestamp_end", "insulin_type", "dose", "carb_input"])
     df_bolus_resampled = prepare_bolus_data(df_bolus)
+    df_bolus_resampled = df_bolus_resampled.rename_axis("timestamp")
+
+    if patient_id is not None:
+        df_bolus_resampled["patient_id"] = patient_id
+
     return df_bolus_resampled
 
 def add_bolus_raw(df_glucose, df_bolus):
+    df_glucose = df_glucose.copy().reset_index()
+    df_bolus = df_bolus.copy().reset_index()
 
-    df_glucose = df_glucose.copy()
+    if "insuline_timestamp_begin" in df_bolus.columns and "timestamp" not in df_bolus.columns:
+        df_bolus = df_bolus.rename(columns={"insuline_timestamp_begin": "timestamp"})
 
-    df_glucose["bolus_raw"] = 0.0
+    required_glucose_cols = {"timestamp", "patient_id"}
+    required_bolus_cols = {"timestamp", "patient_id", "bolus_raw"}
 
-    common_index = df_glucose.index.intersection(df_bolus.index)
+    if not required_glucose_cols.issubset(df_glucose.columns):
+        missing = required_glucose_cols.difference(df_glucose.columns)
+        raise ValueError(f"df_glucose missing required columns: {sorted(missing)}")
 
-    df_glucose.loc[common_index, "bolus_raw"] = df_bolus.loc[common_index, "bolus_raw"]
+    if not required_bolus_cols.issubset(df_bolus.columns):
+        missing = required_bolus_cols.difference(df_bolus.columns)
+        raise ValueError(f"df_bolus missing required columns: {sorted(missing)}")
 
-    return df_glucose
+    df_bolus = (
+        df_bolus.groupby(["patient_id", "timestamp"], as_index=False)["bolus_raw"]
+        .sum()
+    )
+
+    merged = df_glucose.merge(
+        df_bolus,
+        on=["patient_id", "timestamp"],
+        how="left"
+    )
+    merged["bolus_raw"] = merged["bolus_raw"].fillna(0.0)
+
+    return merged.set_index("timestamp").sort_index()
 
 
 def prepare_bolus_data(df_bolus):
