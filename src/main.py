@@ -1,7 +1,7 @@
 import pandas as pd
 from bolus_feature_engineering import add_insulin_activity
-from data_handling import clean_and_summarise_patients_data, parse_and_combine_patients, parse_and_combine_patients_bolus
-from parser import add_bolus_raw, parse_dataframe_to_csv
+from data_handling import clean_and_summarise_patients_data, parse_and_combine_patients, parse_and_combine_patients_bolus, parse_and_combine_patients_meals
+from parser import add_bolus_raw, add_meal_data, parse_dataframe_to_csv, parse_xml_to_meals_dataframe
 from validation import check_bolus_dose
 
 
@@ -21,12 +21,15 @@ bolus_and_glucose_df = add_bolus_raw(cleaned_df, bolus_df)
 check_bolus_dose(bolus_and_glucose_df)
 bolus = add_insulin_activity(bolus_and_glucose_df)
 
+meal_df =parse_and_combine_patients_meals(data_folder)
 
-print("bolus",bolus)
+print(meal_df.head())
+
+bolus_and_meal_df = add_meal_data(bolus, meal_df)
 # print(bolus_and_glucose_df[bolus_and_glucose_df["bolus_raw"] > 0])
-output_folder = "./data/processed/bolus"
+output_folder = "./data/processed/bolus_and_meal_data"
 
-df_to_save =bolus.reset_index()
+df_to_save =bolus_and_meal_df.reset_index()
 
 parse_dataframe_to_csv(output_folder, df_to_save)
 # parse_dataframe_to_parquet(output_folder, df_to_save)

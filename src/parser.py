@@ -46,6 +46,28 @@ def parse_xml_to_bolus_dataframe(file_path, patient_id=None):
 
     return df_bolus_resampled
 
+def parse_xml_to_meals_dataframe(file_path, patient_id=None):
+    tree = ET.parse(file_path)
+    root = tree.getroot()
+    meal_section = root.find("meal")
+    
+    meal_data = []
+    for entry in meal_section:
+            meal_timestamp = entry.attrib["ts"]
+            meal_type = entry.attrib["type"]
+            carbs = int(entry.attrib["carbs"])
+            meal_data.append([meal_timestamp, meal_type, carbs])
+            
+    
+    df_meals = pd.DataFrame(meal_data, columns=["meal_timestamp", "meal_type", "carbs"])
+    df_meals["meal_timestamp"] = pd.to_datetime(df_meals["meal_timestamp"], dayfirst=True)
+    df_meals_resampled = prepare_meal_data(df_meals)
+
+    if patient_id is not None:
+        df_meals_resampled["patient_id"] = patient_id
+
+    return df_meals_resampled
+
 def add_bolus_raw(df_glucose, df_bolus):
     df_glucose = df_glucose.copy().reset_index()
     df_bolus = df_bolus.copy().reset_index()
@@ -78,6 +100,40 @@ def add_bolus_raw(df_glucose, df_bolus):
 
     return merged.set_index("timestamp").sort_index()
 
+def add_meal_data(df_main, df_meals):
+    df_main = df_main.copy().reset_index()
+    df_meals = df_meals.copy().reset_index()
+
+    if "meal_timestamp" in df_meals.columns and "timestamp" not in df_meals.columns:
+        df_meals = df_meals.rename(columns={"meal_timestamp": "timestamp"})
+
+    required_main_cols = {"timestamp", "patient_id"}
+    required_meal_cols = {"timestamp", "patient_id", "carbs", "meal_type"}
+
+    if not required_main_cols.issubset(df_main.columns):
+        missing = required_main_cols.difference(df_main.columns)
+
+        raise ValueError(f"df_main missing required columns: {sorted(missing)}")
+
+    if not required_meal_cols.issubset(df_meals.columns):
+        missing = required_meal_cols.difference(df_meals.columns)
+        raise ValueError(f"df_meals missing required columns: {sorted(missing)}")
+    
+    dups = df_meals.duplicated(["patient_id", "timestamp"])
+
+    if dups.any():
+        raise ValueError("Duplicate patient_id + timestamp rows found.")
+
+    merged = df_main.merge(
+        df_meals,
+        on=["patient_id", "timestamp"],
+        how="left"
+    )
+    merged["carbs"] = merged["carbs"].fillna(0.0)
+    merged["meal_type"] = merged["meal_type"].fillna("none")
+
+    return merged.set_index("timestamp").sort_index()
+
 
 def prepare_bolus_data(df_bolus):
     df_bolus = df_bolus.copy()
@@ -93,6 +149,22 @@ def prepare_bolus_data(df_bolus):
     df_bolus_resampled = df_bolus["dose"].resample("5min").sum().to_frame(name="bolus_raw")
     
     return df_bolus_resampled
+
+def prepare_meal_data(df_meals):
+    df_meals = df_meals.copy()
+    
+    df_meals["meal_timestamp"] = pd.to_datetime(df_meals["meal_timestamp"], dayfirst=True)
+    df_meals = df_meals[df_meals["carbs"] > 0]
+    df_meals = df_meals.sort_values("meal_timestamp")
+    df_meals = df_meals.set_index("meal_timestamp")
+    
+    print("carbs missing value:", df_meals["carbs"].isna().sum())
+    df_meals_resampled = df_meals.resample("5min").agg({
+        "carbs": "sum",
+        "meal_type": lambda x: list(x) if len(x) > 0 else "none"
+    })
+        
+    return df_meals_resampled
 
 def parse_dataframe_to_csv(output_folder, df):
     output_folder_final = output_folder + "/csv"

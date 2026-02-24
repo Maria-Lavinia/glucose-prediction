@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-from parser import parse_xml_to_bolus_dataframe, parse_xml_to_dataframe
+from parser import parse_xml_to_bolus_dataframe, parse_xml_to_dataframe, parse_xml_to_meals_dataframe
 from preprocessing import preprocess_patient
 from validation import check_for_duplicate_boluses, check_for_duplicate_timestamps, check_speed, find_and_remove_extreme_changes, get_summary_by_patient
 
@@ -34,6 +34,20 @@ def parse_and_combine_patients_bolus(data_folder, processsed_patinets_bolus):
     combined_bolus_df = pd.concat(processsed_patinets_bolus)
     check_for_duplicate_boluses(combined_bolus_df)
     return combined_bolus_df
+
+def parse_and_combine_patients_meals(data_folder):
+    processsed_patinets_meals = []
+   
+    for file in os.listdir(data_folder):
+        if file.endswith(".xml"):
+            patient_id = file.split(".")[0]
+            file_path = os.path.join(data_folder, file)
+
+            df = parse_xml_to_meals_dataframe(file_path, patient_id=patient_id)
+            processsed_patinets_meals.append(df)
+
+    combined_meals_df = pd.concat(processsed_patinets_meals)
+    return combined_meals_df
 
 def clean_and_summarise_patients_data(combined_df):
     # Generates a summary of individual patients data 
