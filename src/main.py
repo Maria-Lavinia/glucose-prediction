@@ -2,6 +2,7 @@ import os
 import pandas as pd
 from bolus_feature_engineering import add_insulin_activity
 from data_handling import clean_and_summarise_patients_data, parse_and_combine_patients, parse_and_combine_patients_bolus, parse_and_combine_patients_meals
+from meals_feature_engineering import add_meal_activity
 from parser import add_bolus_raw, add_meal_data, parse_dataframe_to_csv, parse_xml_to_meals_dataframe
 from validation import check_bolus_dose
 from dotenv import load_dotenv
@@ -31,8 +32,9 @@ print(meal_df.head())
 bolus_and_meal_df = add_meal_data(bolus, meal_df)
 # print(bolus_and_glucose_df[bolus_and_glucose_df["bolus_raw"] > 0])
 output_folder = os.getenv("OUTPUT_PATH")
+meal = add_meal_activity(bolus_and_meal_df)
 
-df_to_save =bolus_and_meal_df.reset_index()
+df_to_save = meal.reset_index()
 
 parse_dataframe_to_csv(output_folder, df_to_save)
 # parse_dataframe_to_parquet(output_folder, df_to_save)
