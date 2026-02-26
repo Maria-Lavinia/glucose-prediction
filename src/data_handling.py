@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-from parser import parse_xml_to_bolus_dataframe, parse_xml_to_dataframe, parse_xml_to_meals_dataframe
+from parser import parse_xml_to_bolus_dataframe, parse_xml_to_dataframe, parse_xml_to_meals_dataframe,  parse_xml_to_basis_steps_dataframe
 from preprocessing import preprocess_patient
 from validation import check_for_duplicate_boluses, check_for_duplicate_timestamps, check_speed, find_and_remove_extreme_changes, get_summary_by_patient
 
@@ -36,8 +36,7 @@ def parse_and_combine_patients_bolus(data_folder, processsed_patinets_bolus):
     return combined_bolus_df
 
 def parse_and_combine_patients_meals(data_folder):
-    processsed_patinets_meals = []
-   
+    processsed_patinets_meals = []   
     for file in os.listdir(data_folder):
         if file.endswith(".xml"):
             patient_id = file.split(".")[0]
@@ -48,6 +47,21 @@ def parse_and_combine_patients_meals(data_folder):
 
     combined_meals_df = pd.concat(processsed_patinets_meals)
     return combined_meals_df
+
+ 
+def parse_and_combine_patients_basis_steps(data_folder):
+    processed_patients_steps = []
+    
+    for file in os.listdir(data_folder):
+        if file.endswith(".xml"):
+            patient_id = file.split(".")[0]
+            file_path = os.path.join(data_folder, file)
+
+            df = parse_xml_to_basis_steps_dataframe(file_path, patient_id=patient_id)
+            processed_patients_steps.append(df)
+
+    combined_steps_df = pd.concat(processed_patients_steps)
+    return combined_steps_df
 
 def clean_and_summarise_patients_data(combined_df):
     # Generates a summary of individual patients data 
