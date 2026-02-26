@@ -78,7 +78,6 @@ def add_bolus_raw(df_glucose, df_bolus):
 
     return merged.set_index("timestamp").sort_index()
 
-
 def prepare_bolus_data(df_bolus):
     df_bolus = df_bolus.copy()
     
@@ -96,14 +95,17 @@ def prepare_bolus_data(df_bolus):
 
 def prepare_steps_data(df_steps):
     df_steps = df_steps.copy()
+    
     df_steps["timestamp"] = pd.to_datetime(df_steps["timestamp"], dayfirst=True)
-    df_steps = df_steps[df_steps["steps_raw"] > 0]
+    df_steps = df_steps[df_steps["steps"] > 0]
     df_steps = df_steps.sort_values("timestamp")
     df_steps = df_steps.set_index("timestamp")
     
     # no missing values
-    print(df_steps["steps_raw"].isna().sum())
-    df_steps_resampled = df_steps["steps_raw"].resample("5min").sum().to_frame(name="steps_raw")
+    print(df_steps["steps"].isna().sum())
+    df_steps_resampled = df_steps.resample("5min").sum()
+    df_steps_resampled.columns = ["steps"]
+        
     return df_steps_resampled
 
 def parse_xml_to_basis_steps_dataframe(file_path, patient_id=None):
@@ -117,13 +119,9 @@ def parse_xml_to_basis_steps_dataframe(file_path, patient_id=None):
         value = float(entry.attrib["value"])
         steps_data.append([timestamp, value])
 
-    df_steps = pd.DataFrame(steps_data, columns=["timestamp", "steps_raw"])
+    df_steps = pd.DataFrame(steps_data, columns=["timestamp", "steps"])
     df_steps["timestamp"] = pd.to_datetime(df_steps["timestamp"], dayfirst=True)
-    df_steps = df_steps.sort_values("timestamp")
-    df_steps = df_steps.set_index("timestamp")
-
-    df_steps_resampled = df_steps["steps_raw"].resample("5min").sum().to_frame(name="steps_raw")
-    df_steps_resampled = df_steps_resampled.rename_axis("timestamp")
+    df_steps_resampled  = prepare_steps_data(df_steps)
 
     if patient_id is not None:
         df_steps_resampled["patient_id"] = patient_id
@@ -131,32 +129,32 @@ def parse_xml_to_basis_steps_dataframe(file_path, patient_id=None):
     return df_steps_resampled
 
 
-def add_basis_steps_raw(df_glucose, df_steps):
-    df_glucose = df_glucose.copy().reset_index()
+def add_basis_steps(df_main, df_steps):
+    df_main = df_main.copy().reset_index()
     df_steps = df_steps.copy().reset_index()
 
-    required_glucose_cols = {"timestamp", "patient_id"}
-    required_steps_cols = {"timestamp", "patient_id", "steps_raw"}
+    required_main_cols = {"timestamp", "patient_id"}
+    required_steps_cols = {"timestamp", "patient_id", "steps"}
 
-    if not required_glucose_cols.issubset(df_glucose.columns):
-        missing = required_glucose_cols.difference(df_glucose.columns)
-        raise ValueError(f"df_glucose missing required columns: {sorted(missing)}")
+    if not required_main_cols.issubset(df_main.columns):
+        missing = required_main_cols.difference(df_main.columns)
+        raise ValueError(f"df_main missing required columns: {sorted(missing)}")
 
     if not required_steps_cols.issubset(df_steps.columns):
         missing = required_steps_cols.difference(df_steps.columns)
         raise ValueError(f"df_steps missing required columns: {sorted(missing)}")
 
     df_steps = (
-        df_steps.groupby(["patient_id", "timestamp"], as_index=False)["steps_raw"]
+        df_steps.groupby(["patient_id", "timestamp"], as_index=False)["steps"]
         .sum()
     )
 
-    merged = df_glucose.merge(
+    merged = df_main.merge(
         df_steps,
         on=["patient_id", "timestamp"],
         how="left"
     )
-    merged["steps_raw"] = merged["steps_raw"].fillna(0.0)
+    merged["steps"] = merged["steps"].fillna(0.0)
 
     return merged.set_index("timestamp").sort_index()
 

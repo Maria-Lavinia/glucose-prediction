@@ -35,7 +35,9 @@ def parse_and_combine_patients_bolus(data_folder, processsed_patinets_bolus):
     check_for_duplicate_boluses(combined_bolus_df)
     return combined_bolus_df
 
-def parse_and_combine_patients_basis_steps(data_folder, processed_patients_steps):
+def parse_and_combine_patients_basis_steps(data_folder):
+    processed_patients_steps = []
+    
     for file in os.listdir(data_folder):
         if file.endswith(".xml"):
             patient_id = file.split(".")[0]
