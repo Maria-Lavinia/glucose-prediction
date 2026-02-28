@@ -4,6 +4,7 @@ from bolus_feature_engineering import add_insulin_activity
 from data_handling import clean_and_summarise_patients_data, parse_and_combine_patients, parse_and_combine_patients_bolus, parse_and_combine_patients_meals
 from meals_feature_engineering import add_meal_activity
 from parser import add_bolus_raw, add_meal_data, parse_dataframe_to_csv, add_basis_steps
+from steps_feature_engineering import add_steps_weighted_avg
 from data_handling import clean_and_summarise_patients_data, parse_and_combine_patients, parse_and_combine_patients_bolus, parse_and_combine_patients_basis_steps
 from validation import check_bolus_dose
 from dotenv import load_dotenv
@@ -36,7 +37,11 @@ bolus_and_meal_df = add_meal_data(bolus, meal_df)
 output_folder = os.getenv("OUTPUT_PATH")
 meal = add_meal_activity(bolus_and_meal_df)
 
+
 bolus_and_steps_df = add_basis_steps(meal, steps_df)
+
+# Add steps_weighted_avg feature
+bolus_and_steps_df = add_steps_weighted_avg(bolus_and_steps_df, steps_col='steps')
 
 df_to_save = bolus_and_steps_df.reset_index()
 
