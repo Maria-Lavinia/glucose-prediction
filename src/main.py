@@ -52,8 +52,6 @@ parse_dataframe_to_csv(output_folder, df_to_save)
 print("steps_df head:", steps_df.head())
 print("cleaned_df head:", cleaned_df.head())
 
-
-
 # Merge bolus_raw into steps_and_glucose_df, preserving steps_raw
 parse_dataframe_to_csv(output_folder, df_to_save)
 
