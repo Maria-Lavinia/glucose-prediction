@@ -108,7 +108,7 @@ def add_meal_data(df_main, df_meals):
         df_meals = df_meals.rename(columns={"meal_timestamp": "timestamp"})
 
     required_main_cols = {"timestamp", "patient_id"}
-    required_meal_cols = {"timestamp", "patient_id", "carbs", "meal_type"}
+    required_meal_cols = {"timestamp", "patient_id", "carbs"}
 
     if not required_main_cols.issubset(df_main.columns):
         missing = required_main_cols.difference(df_main.columns)
@@ -130,7 +130,8 @@ def add_meal_data(df_main, df_meals):
         how="left"
     )
     merged["carbs"] = merged["carbs"].fillna(0.0)
-    merged["meal_type"] = merged["meal_type"].fillna("none")
+    meal_cols = merged.filter(like='meal_').columns
+    merged[meal_cols] = merged[meal_cols].fillna(0.0)
 
     return merged.set_index("timestamp").sort_index()
 
@@ -161,10 +162,17 @@ def prepare_meal_data(df_meals):
     print("carbs missing value:", df_meals["carbs"].isna().sum())
     df_meals_resampled = df_meals.resample("5min").agg({
         "carbs": "sum",
-        "meal_type": lambda x: list(x) if len(x) > 0 else "none"
+        "meal_type": lambda x: list(x) if len(x) > 0 else []
     })
+    
+    meals_exploded = df_meals_resampled.explode("meal_type")
+    dummies = pd.get_dummies(meals_exploded["meal_type"], prefix="meal")
+    meal_type_counts = dummies.groupby(dummies.index).sum()
+    df_meals_resampled = df_meals_resampled.drop(columns=["meal_type"]).join(meal_type_counts).fillna(0)
+    
         
     return df_meals_resampled
+
 def prepare_steps_data(df_steps):
     df_steps = df_steps.copy()
     
