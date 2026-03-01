@@ -43,7 +43,8 @@ bolus_and_steps_df = add_basis_steps(meal, steps_df)
 # Add steps_weighted_avg feature
 bolus_and_steps_df = add_steps_weighted_avg(bolus_and_steps_df, steps_col='steps')
 
-df_to_save = bolus_and_steps_df.reset_index()
+df_to_save = bolus_and_steps_df.sort_values(["patient_id", "timestamp"])
+df_to_save = df_to_save.reset_index()
 
 parse_dataframe_to_csv(output_folder, df_to_save)
 # parse_dataframe_to_parquet(output_folder, df_to_save)
