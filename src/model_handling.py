@@ -38,7 +38,7 @@ def create_sequences(data_array, target_array, time_steps=36, horizon=6):
         
     return np.array(X), np.array(y)
 
-def train_pateint_model(df, model_data_folder):
+def train_patient_model(df, model_data_folder):
     
     patient_ids = df['patient_id'].unique()
     print("Unique patient IDs:", patient_ids)
@@ -55,19 +55,41 @@ def train_pateint_model(df, model_data_folder):
         TIME_STEPS = 36
         features = [col for col in train_df.columns if col not in ['patient_id', 'timestamp', 'glucose']]
         target = 'glucose'
+    
+        X_train_list = []
+        Y_train_list = []  
+        
         
         scaler_X = StandardScaler()
         X_train_scaled = scaler_X.fit_transform(train_df[features])
-        X_test_scaled = scaler_X.transform(test_df[features])
 
         scaler_y = StandardScaler()
         y_train_scaled = scaler_y.fit_transform(train_df[[target]])
+        
+        train_data_combined = train_df.copy()
+        train_data_combined[features] = X_train_scaled
+        train_data_combined[target] = y_train_scaled
+        
+        for p_id in train_data_combined['patient_id'].unique():
+            p_data = train_data_combined[train_data_combined['patient_id'] == p_id]
+            
+            
+            p_features = p_data[features].to_numpy()
+            p_target = p_data[[target]].to_numpy()
+              
+            
+            p_data_combined = np.hstack([p_features, p_target])
+            x_p, y_p = create_sequences(p_data_combined, p_target, time_steps=TIME_STEPS)
+            
+            X_train_list.append(x_p)
+            Y_train_list.append(y_p)
+            
+            
+        X_test_scaled = scaler_X.transform(test_df[features])
         y_test_scaled = scaler_y.transform(test_df[[target]])
-
-        train_data_combined = np.hstack([X_train_scaled, y_train_scaled])
         test_data_combined = np.hstack([X_test_scaled, y_test_scaled])
         
-        X_train, y_train = create_sequences(train_data_combined, y_train_scaled, time_steps=TIME_STEPS)
+        X_train, y_train = np.concatenate(X_train_list, axis=0), np.concatenate(Y_train_list, axis=0)
         X_test, y_test = create_sequences(test_data_combined, y_test_scaled, time_steps=TIME_STEPS)
         
         print("Missing values in features:", train_df.isnull().sum().sum())
@@ -79,6 +101,8 @@ def train_pateint_model(df, model_data_folder):
         print("====================================")
         print("Building model...")
         print("====================================")
+        
+        
         
         model = build_lstm_model(input_shape=(TIME_STEPS, len(features)+1))
         
@@ -110,7 +134,7 @@ def train_pateint_model(df, model_data_folder):
 
     return results
 
-def build_lstm_model(input_shape, units=64, dropout_rate=0.3, learning_rate=0.001):
+def build_lstm_model(input_shape, units=32, dropout_rate=0.1, learning_rate=0.001):
     """
     Builds and compiles a Sequential LSTM model.
     
@@ -126,11 +150,19 @@ def build_lstm_model(input_shape, units=64, dropout_rate=0.3, learning_rate=0.00
     model.add(keras.layers.LSTM(
         units=units, 
         input_shape=input_shape,
+        return_sequences=True
+    ))
+    
+    model.add(keras.layers.LSTM(
+        units=units, 
+        return_sequences=False
     ))
     
     model.add(keras.layers.Dropout(dropout_rate))
     
-    model.add(keras.layers.Dense(32, activation='relu')) 
+    model.add(keras.layers.Dense(units//2, activation='relu')) 
+    
+    model.add(keras.layers.Dense(units//2, activation='relu')) 
     
     model.add(keras.layers.Dense(1))  # Output layer for regression
     

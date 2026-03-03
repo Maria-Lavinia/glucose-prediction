@@ -3,10 +3,11 @@ import pandas as pd
 from bolus_feature_engineering import add_insulin_activity
 from data_handling import clean_and_summarise_patients_data, parse_and_combine_patients, parse_and_combine_patients_bolus, parse_and_combine_patients_meals
 from meals_feature_engineering import add_meal_activity
-from model_handling import read_csv_for_modeling, train_pateint_model
+from model_handling import read_csv_for_modeling, train_patient_model
 from parser import add_bolus_raw, add_meal_data, parse_dataframe_to_csv, add_basis_steps
 from steps_feature_engineering import add_steps_weighted_avg
 from data_handling import clean_and_summarise_patients_data, parse_and_combine_patients, parse_and_combine_patients_bolus, parse_and_combine_patients_basis_steps
+from tuning.hyperparameter_tuning import run_hyperparameter_search
 from validation import check_bolus_dose
 from dotenv import load_dotenv
 
@@ -15,10 +16,11 @@ load_dotenv()
 
 data_folder = os.getenv("MODEL_DATA_PATH")
 model_data_folder = os.getenv("MODEL_RESULTS_PATH")
-df = read_csv_for_modeling(data_folder)
+df = read_csv_for_modeling(data_folder) 
 
+# run_hyperparameter_search(df)
 
-train_pateint_model(df, model_data_folder)
+train_patient_model(df, model_data_folder)
 
 # processed_patients = []
 # processed_patients_bolus = []

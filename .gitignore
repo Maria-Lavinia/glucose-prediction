@@ -1,3 +1,4 @@
 src/__pycache__/
 .env
 .DS_Store
+src/tuning/__pycache__
