@@ -6,6 +6,8 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 
+from clark_error_grid import get_clark_error_zone, plot_clark_error_grid
+
 def read_csv_for_modeling(folder_path):
     files = os.listdir(folder_path)
     
@@ -44,6 +46,7 @@ def train_patient_model(df, model_data_folder):
     print("Unique patient IDs:", patient_ids)
        
     results = []
+    clark_error_zones_all_patients = []
     for test_patient in patient_ids:
         print(f"Processing patient_id: {test_patient}")
         train_df = df[df['patient_id'] != test_patient].copy()
@@ -125,12 +128,21 @@ def train_patient_model(df, model_data_folder):
         
         rmse = np.sqrt(mean_squared_error(y_true, y_pred))
         print(f"Final RMSE for {test_patient}: {rmse:.2f} mg/dL")
+        
+        clark_error_zones = get_clark_error_zone(y_pred, y_true)
+        print(f"Clark Error Zones for patient {test_patient}: {pd.Series(clark_error_zones).value_counts().to_dict()}")
+        clark_error_zones_all_patients.append(clark_error_zones)
+        
+        #plot_clark_error_grid(clark_error_zones, model_data_folder, test_patient)
                 
     print("=========")
     print("MODEL REUSLTS")
     print("=========")
     
     print(results)
+   
+    all_zones = [zone for patient_zones in clark_error_zones_all_patients for zone in patient_zones]
+    print("Overall Clark Error Zones:", pd.Series(all_zones).value_counts().to_dict())
 
     return results
 
@@ -211,4 +223,6 @@ def plot_results(expected_value, predicted_value, model_data_folder, test_patien
 
     plt.savefig(model_data_folder + f"/patient_{test_patient}_3.png")
     
+    
+
     
