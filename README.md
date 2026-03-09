@@ -116,9 +116,9 @@ This is a thesis project. For questions or suggestions, please contact the autho
 
 ## Authors
 
-Maria Otelea, Master Student at Roskilde University
-Adelina Radulescu, Master Student at Roskilde University
-Pawel Stepien, Master Student at Roskilde University
+- Adelina Radulescu, Master Student at Roskilde University
+- Maria Otelea, Master Student at Roskilde University
+- Pawel Stepien, Master Student at Roskilde University
 
 ## Acknowledgments
 
