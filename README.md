@@ -66,7 +66,7 @@ The dataset includes data from 6 patients (IDs: 559, 563, 570, 575, 588, 591), s
 
 ```bash
 # Clone the repository
-git clone <https://github.com/Maria-Lavinia/glucose-prediction.git>
+git clone https://github.com/Maria-Lavinia/glucose-prediction.git
 cd master-thesis
 
 ```
