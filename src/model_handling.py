@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
-
+import tensorflow as tf
 from clark_error_grid import get_clark_error_zone, plot_clark_error_grid
 
 def read_csv_for_modeling(folder_path):
@@ -41,6 +41,10 @@ def create_sequences(data_array, target_array, time_steps=36, horizon=6):
     return np.array(X), np.array(y)
 
 def train_patient_model(df, model_data_folder):
+    
+    df = df.sort_values(['patient_id', 'timestamp'])
+    df['delta'] = df.groupby('patient_id')['glucose'].diff().fillna(0)
+    df['acceleration'] = df.groupby('patient_id')['delta'].diff().fillna(0)
     
     patient_ids = df['patient_id'].unique()
     print("Unique patient IDs:", patient_ids)
@@ -146,6 +150,17 @@ def train_patient_model(df, model_data_folder):
 
     return results
 
+def clarke_weighted_mse(y_true, y_pred):
+    squared_difference = tf.square(y_true - y_pred)
+    weights = tf.where(y_true <= 70, 5.0, 
+              tf.where(y_true >= 240, 2.0, 
+              1.0))
+    
+    # penalty is 5x for hypoglycemia, 2x for hyperglycemia, and 1x for normal range
+    weighted_loss = squared_difference * weights
+    return tf.reduce_mean(weighted_loss) 
+    
+
 def build_lstm_model(input_shape, units=32, dropout_rate=0.1, learning_rate=0.001):
     """
     Builds and compiles a Sequential LSTM model.
@@ -182,7 +197,7 @@ def build_lstm_model(input_shape, units=32, dropout_rate=0.1, learning_rate=0.00
     
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=learning_rate),
-        loss='mean_squared_error',
+        loss=clarke_weighted_mse,
         metrics=['mean_absolute_error', keras.metrics.RootMeanSquaredError(name='rmse')]
     )
 
@@ -222,7 +237,3 @@ def plot_results(expected_value, predicted_value, model_data_folder, test_patien
     plt.ylabel("Frequency")
 
     plt.savefig(model_data_folder + f"/patient_{test_patient}_3.png")
-    
-    
-
-    
