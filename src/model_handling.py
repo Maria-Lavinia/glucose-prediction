@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
+import joblib
 
 def read_csv_for_modeling(folder_path):
     files = os.listdir(folder_path)
@@ -131,8 +132,13 @@ def train_patient_model(df, model_data_folder):
     print("=========")
     
     print(results)
+    
+    model.save(model_data_folder + "/lstm_model.h5")
+    joblib.dump(scaler_X, model_data_folder + "/scaler_X.pkl")
+    joblib.dump(scaler_y, model_data_folder + "/scaler_y.pkl")
 
     return results
+
 
 def build_lstm_model(input_shape, units=32, dropout_rate=0.1, learning_rate=0.001):
     """
