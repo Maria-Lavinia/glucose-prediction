@@ -1,0 +1,19 @@
+Patient,Model,RMSE,MAE
+559-ws-training,Naive,29.26,20.44
+559-ws-training,Linear Reg.,24.15,16.76
+559-ws-training,LSTM,15.34,11.2
+563-ws-training,Naive,20.37,14.81
+563-ws-training,Linear Reg.,18.28,13.35
+563-ws-training,LSTM,17.03,12.8
+570-ws-training,Naive,20.13,14.03
+570-ws-training,Linear Reg.,19.98,13.81
+570-ws-training,LSTM,16.04,12.1
+575-ws-training,Naive,24.75,17.37
+575-ws-training,Linear Reg.,20.48,14.59
+575-ws-training,LSTM,17.84,13.5
+588-ws-training,Naive,24.54,17.48
+588-ws-training,Linear Reg.,22.17,15.43
+588-ws-training,LSTM,14.36,10.9
+591-ws-training,Naive,27.35,19.65
+591-ws-training,Linear Reg.,24.31,17.11
+591-ws-training,LSTM,14.99,11.3

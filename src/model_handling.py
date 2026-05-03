@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
+import shap
 
 def read_csv_for_modeling(folder_path):
     files = os.listdir(folder_path)
@@ -39,6 +40,8 @@ def create_sequences(data_array, target_array, time_steps=36, horizon=6):
     return np.array(X), np.array(y)
 
 def train_patient_model(df, model_data_folder):
+
+    os.makedirs(model_data_folder, exist_ok=True)
     
     patient_ids = df['patient_id'].unique()
     print("Unique patient IDs:", patient_ids)
@@ -119,10 +122,38 @@ def train_patient_model(df, model_data_folder):
         y_true = scaler_y.inverse_transform(y_test)
         
         plot_results(y_true, y_pred, model_data_folder, test_patient)
+
+        if test_patient == patient_ids[0]:
+
+            print("Running explainability analysis...")
+
+            # Optional: reduce size to make it faster
+            X_explain = X_test[:200]
+            y_explain = y_test[:200]
+
+            # 1️⃣ Fixed permutation feature importance
+            feature_names = features + ["past_glucose"]
+            permutation_feature_importance(model, X_explain, y_explain, feature_names)
+
+            # 2️⃣ Time-step importance
+            timestep_importance(
+                model,
+                X_explain,
+                y_explain
+            )
+
+            # 3️⃣ Feature × Time heatmap (MAIN ONE)
+            feature_time_importance(
+                model,
+                X_explain,
+                y_explain,
+                features + ["glucose"]
+            )
+
         mae = mean_absolute_error(y_true, y_pred)
         results.append(mae)
         print(f"Final MAE for {test_patient}: {mae:.2f} mg/dL")
-        
+            
         rmse = np.sqrt(mean_squared_error(y_true, y_pred))
         print(f"Final RMSE for {test_patient}: {rmse:.2f} mg/dL")
                 
@@ -210,5 +241,98 @@ def plot_results(expected_value, predicted_value, model_data_folder, test_patien
     plt.ylabel("Frequency")
 
     plt.savefig(model_data_folder + f"/patient_{test_patient}_3.png")
-    
-    
+    plt.close()
+
+
+
+def permutation_feature_importance(model, X_test, y_test, features):
+
+    import numpy as np
+    from sklearn.metrics import mean_absolute_error
+
+    baseline_pred = model.predict(X_test)
+    baseline_mae = mean_absolute_error(y_test, baseline_pred)
+
+    importances = []
+
+    for f in range(X_test.shape[2]):
+
+        X_permuted = X_test.copy()
+
+        # shuffle entire sequences, not timesteps
+        perm_idx = np.random.permutation(X_permuted.shape[0])
+        X_permuted[:, :, f] = X_permuted[perm_idx, :, f]
+
+        perm_pred = model.predict(X_permuted)
+        perm_mae = mean_absolute_error(y_test, perm_pred)
+
+        importance = perm_mae - baseline_mae
+        importances.append(importance)
+
+    importances = np.array(importances)
+
+    plt.figure(figsize=(8,6))
+    plt.barh(features, importances)
+    plt.xlabel("Increase in MAE after permutation")
+    plt.title("Permutation Feature Importance")
+    plt.tight_layout()
+
+    plt.show()
+
+
+def timestep_importance(model, X_test, y_test):
+    baseline_pred = model.predict(X_test)
+    baseline_mae = mean_absolute_error(y_test, baseline_pred)
+
+    time_steps = X_test.shape[1]
+    importances = []
+
+    for t in range(time_steps):
+        X_permuted = X_test.copy()
+
+        # shuffle ONLY timestep t
+        perm_idx = np.random.permutation(X_permuted.shape[0])
+        X_permuted[:, t, :] = X_permuted[perm_idx, t, :]
+
+        perm_pred = model.predict(X_permuted)
+        perm_mae = mean_absolute_error(y_test, perm_pred)
+
+        importances.append(perm_mae - baseline_mae)
+
+    plt.plot(importances)
+    plt.title("Timestep Importance")
+    plt.xlabel("Time step (past)")
+    plt.ylabel("MAE increase")
+    plt.show()
+
+
+def feature_time_importance(model, X_test, y_test, feature_names):
+    baseline_pred = model.predict(X_test)
+    baseline_mae = mean_absolute_error(y_test, baseline_pred)
+
+    T = X_test.shape[1]
+    F = X_test.shape[2]
+
+    importance_matrix = np.zeros((T, F))
+
+    for t in range(T):
+        for f in range(F):
+            X_perm = X_test.copy()
+
+            perm_idx = np.random.permutation(X_perm.shape[0])
+            X_perm[:, t, f] = X_perm[perm_idx, t, f]
+
+            perm_pred = model.predict(X_perm)
+            perm_mae = mean_absolute_error(y_test, perm_pred)
+
+            importance_matrix[t, f] = perm_mae - baseline_mae
+
+    plt.figure(figsize=(12,6))
+    plt.imshow(importance_matrix, aspect='auto')
+    plt.colorbar(label="MAE Increase")
+    plt.xlabel("Features")
+    plt.ylabel("Time Steps")
+    plt.xticks(range(F), feature_names, rotation=45)
+    plt.title("Feature-Time Importance Heatmap")
+    plt.tight_layout()
+    plt.show()
